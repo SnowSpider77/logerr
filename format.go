@@ -69,13 +69,17 @@ func openLogFile(path string, append bool) (*os.File, error) {
 	return os.OpenFile(path, flags, 0644)
 }
 
+type writerHolder struct {
+	w io.Writer
+}
+
 var (
-	writer      atomic.Value // stores io.Writer
+	writer      atomic.Value // stores *writerHolder
 	configValue atomic.Value // stores Config
 )
 
 func init() {
-	writer.Store(io.Discard)
+	writer.Store(&writerHolder{w: io.Discard})
 	configValue.Store(Config{
 		TimeFormat:   time.RFC3339,
 		TimePosition: TimeBefore,
@@ -128,9 +132,11 @@ func SetConfig(c Config) error {
 }
 
 func swapWriter(w io.Writer) {
-	old := writer.Swap(w) // atomic swap
-	if oldFile, ok := old.(*os.File); ok && oldFile != nil {
-		_ = oldFile.Close()
+	old := writer.Swap(&writerHolder{w: w}) // atomic swap
+	if oldHolder, ok := old.(*writerHolder); ok && oldHolder != nil {
+		if oldFile, ok := oldHolder.w.(*os.File); ok && oldFile != nil {
+			_ = oldFile.Close()
+		}
 	}
 }
 

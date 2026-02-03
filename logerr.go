@@ -70,9 +70,10 @@ func Log(err error) error {
 		return err
 	}
 
-	w, _ := writer.Load().(io.Writer)
-	if w == nil {
-		w = io.Discard
+	holder, _ := writer.Load().(*writerHolder)
+	w := io.Discard
+	if holder != nil && holder.w != nil {
+		w = holder.w
 	}
 	fmt.Fprintln(w, err.Error())
 	return err
@@ -82,9 +83,10 @@ func (e *LogErr) Log() *LogErr {
 	if e == nil {
 		return nil
 	}
-	w, _ := writer.Load().(io.Writer)
-	if w == nil {
-		w = io.Discard
+	holder, _ := writer.Load().(*writerHolder)
+	w := io.Discard
+	if holder != nil && holder.w != nil {
+		w = holder.w
 	}
 	fmt.Fprintln(w, e.LogString())
 	return e
